@@ -7,15 +7,19 @@ A FiveM crafting system with placeable benches, weapon repair, and ox_inventory 
 1. Download and place the `sjcrafting` folder in your server's resources directory
 2. Add `ensure sjcrafting` to your server.cfg
 3. Ensure you have the following dependencies:
-   - ox_lib
-   - ox_inventory
-   - ox_target
+- ox_lib
+- ox_inventory
+- ox_target
 
 ## Dependencies
 
 - ox_lib
 - ox_inventory  
 - ox_target
+- Qbox
+- Ox_lib
+- Ox_inventory  
+- Ox_target
 
 ## Setup
 
@@ -35,39 +39,43 @@ Add these items to your ox_inventory items.lua:
 
 ```lua
 ['crafting_bench_w'] = {
-    label = 'Weapon Crafting Bench',
-    weight = 5000,
-    stack = false,
-    close = true,
-    description = 'Placeable weapon crafting bench',
-    consume = 0,
-    buttons = {
-        {
-            label = 'Place',
-            action = function(slot)
-                exports.sjcrafting:placeCraftingBench('weapon_bench', slot)
-            end
-        }
-    }
+label = 'Weapon Crafting Bench',
+weight = 5000,
+stack = false,
+close = true,
+description = 'Placeable weapon crafting bench',
+consume = 0,
+buttons = {
+{
+label = 'Place',
+action = function(slot)
+exports.sjcrafting:placeCraftingBench('weapon_bench', slot)
+end
+}
+}
 },
 
 ['police_crafting_bench'] = {
-    label = 'Police Equipment Bench', 
-    weight = 5000,
-    stack = false,
-    close = true,
-    description = 'Placeable police equipment bench',
-    consume = 0,
-    buttons = {
-        {
-            label = 'Place',
-            action = function(slot)
-                exports.sjcrafting:placeCraftingBench('police_bench', slot)
-            end
-        }
-    }
+label = 'Police Equipment Bench', 
+weight = 5000,
+stack = false,
+close = true,
+description = 'Placeable police equipment bench',
+consume = 0,
+buttons = {
+{
+label = 'Place',
+action = function(slot)
+exports.sjcrafting:placeCraftingBench('police_bench', slot)
+end
+}
+}
 }
 ```
+
+### Database Setup
+
+The script will automatically create the required database tables on startup. If you encounter any database issues, you can manually run the `database.sql` file in your MySQL database.
 
 ## Adding More Placeable Items
 
@@ -77,20 +85,20 @@ To add additional placeable crafting benches:
 
 ```lua
 ['your_crafting_bench'] = {
-    label = 'Your Crafting Bench',
-    weight = 5000,
-    stack = false,
-    close = true,
-    description = 'Placeable crafting bench',
-    consume = 0,
-    buttons = {
-        {
-            label = 'Place',
-            action = function(slot)
-                exports.sjcrafting:placeCraftingBench('your_bench_type', slot)
-            end
-        }
-    }
+label = 'Your Crafting Bench',
+weight = 5000,
+stack = false,
+close = true,
+description = 'Placeable crafting bench',
+consume = 0,
+buttons = {
+{
+label = 'Place',
+action = function(slot)
+exports.sjcrafting:placeCraftingBench('your_bench_type', slot)
+end
+}
+}
 }
 ```
 
@@ -98,15 +106,15 @@ To add additional placeable crafting benches:
 
 ```lua
 your_bench_type = {
-    label = "Your Crafting Bench",
-    description = "Description of your bench",
-    item = "your_crafting_bench",
-    prop = "prop_tool_bench02",
-    type = "your_type",
-    weaponRepair = false,
-    allowedJobs = {
-        {job = "your_job", grade = 0}
-    }
+label = "Your Crafting Bench",
+description = "Description of your bench",
+item = "your_crafting_bench",
+prop = "prop_tool_bench02",
+type = "your_type",
+weaponRepair = false,
+allowedJobs = {
+{job = "your_job", grade = 0}
+}
 }
 ```
 
@@ -120,18 +128,18 @@ Add recipes to the appropriate section and type in `Config.CraftingItems`:
 
 ```lua
 {
-    name = "item_name",
-    label = "Item Label",
-    description = "Item description",
-    time = 30, -- seconds
-    requiredLevel = 1,
-    maxAmount = 10,
-    successChance = 100, -- percentage
-    xpReward = 10,
-    recipe = {
-        {item = "material1", amount = 2},
-        {item = "material2", amount = 1}
-    }
+name = "item_name",
+label = "Item Label",
+description = "Item description",
+time = 30, -- seconds
+requiredLevel = 1,
+maxAmount = 10,
+successChance = 100, -- percentage
+xpReward = 10,
+recipe = {
+{item = "material1", amount = 2},
+{item = "material2", amount = 1}
+}
 }
 ```
 
@@ -145,10 +153,14 @@ Add recipes to the appropriate section and type in `Config.CraftingItems`:
 - ox_inventory integration
 - ox_target interaction
 
+## Commands
+- /createcrafting to create a new crafting table
+- /managecrafting to view, teleport to, and delete all crafting tables
+
 ## Usage
 
-1. Use a crafting bench item from inventory to place it
-2. Approach the placed bench and press E to interact
+1. Use a crafting bench item from inventory(or place as admin)
+2. Approach the placed bench and third eye to interact
 3. Select items to craft or repair
 4. Wait for crafting/repair to complete
 
