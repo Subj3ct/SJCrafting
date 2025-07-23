@@ -32,37 +32,37 @@ Add these items to your ox_inventory items.lua:
 
 ```lua
 ['crafting_bench_w'] = {
-label = 'Weapon Crafting Bench',
-weight = 5000,
-stack = false,
-close = true,
-description = 'Placeable weapon crafting bench',
-consume = 0,
-buttons = {
-{
-label = 'Place',
-action = function(slot)
-exports.sjcrafting:placeCraftingBench('weapon_bench', slot)
-end
-}
-}
+    label = 'Weapon Crafting Bench',
+    weight = 5000,
+    stack = false,
+    close = true,
+    description = 'Placeable weapon crafting bench',
+    consume = 0,
+    buttons = {
+        {
+            label = 'Place',
+            action = function(slot)
+                exports.sjcrafting:placeCraftingBench('weapon_bench', slot)
+            end
+        }
+    }
 },
 
 ['police_crafting_bench'] = {
-label = 'Police Equipment Bench', 
-weight = 5000,
-stack = false,
-close = true,
-description = 'Placeable police equipment bench',
-consume = 0,
-buttons = {
-{
-label = 'Place',
-action = function(slot)
-exports.sjcrafting:placeCraftingBench('police_bench', slot)
-end
-}
-}
+    label = 'Police Equipment Bench', 
+    weight = 5000,
+    stack = false,
+    close = true,
+    description = 'Placeable police equipment bench',
+    consume = 0,
+    buttons = {
+        {
+            label = 'Place',
+            action = function(slot)
+                exports.sjcrafting:placeCraftingBench('police_bench', slot)
+            end
+        }
+    }
 }
 ```
 
@@ -78,20 +78,20 @@ To add additional placeable crafting benches:
 
 ```lua
 ['your_crafting_bench'] = {
-label = 'Your Crafting Bench',
-weight = 5000,
-stack = false,
-close = true,
-description = 'Placeable crafting bench',
-consume = 0,
-buttons = {
-{
-label = 'Place',
-action = function(slot)
-exports.sjcrafting:placeCraftingBench('your_bench_type', slot)
-end
-}
-}
+    label = 'Your Crafting Bench',
+    weight = 5000,
+    stack = false,
+    close = true,
+    description = 'Placeable crafting bench',
+    consume = 0,
+    buttons = {
+        {
+            label = 'Place',
+            action = function(slot)
+                exports.sjcrafting:placeCraftingBench('your_bench_type', slot)
+            end
+        }
+    }
 }
 ```
 
@@ -99,15 +99,15 @@ end
 
 ```lua
 your_bench_type = {
-label = "Your Crafting Bench",
-description = "Description of your bench",
-item = "your_crafting_bench",
-prop = "prop_tool_bench02",
-type = "your_type",
-weaponRepair = false,
-allowedJobs = {
-{job = "your_job", grade = 0}
-}
+    label = "Your Crafting Bench",
+    description = "Description of your bench",
+    item = "your_crafting_bench",
+    prop = "prop_tool_bench02",
+    type = "your_type",
+    weaponRepair = false,
+    allowedJobs = {
+        {job = "your_job", grade = 0}
+    }
 }
 ```
 
@@ -121,18 +121,18 @@ Add recipes to the appropriate section and type in `Config.CraftingItems`:
 
 ```lua
 {
-name = "item_name",
-label = "Item Label",
-description = "Item description",
-time = 30, -- seconds
-requiredLevel = 1,
-maxAmount = 10,
-successChance = 100, -- percentage
-xpReward = 10,
-recipe = {
-{item = "material1", amount = 2},
-{item = "material2", amount = 1}
-}
+    name = "item_name",
+    label = "Item Label",
+    description = "Item description",
+    time = 30, -- seconds
+    requiredLevel = 1,
+    maxAmount = 10,
+    successChance = 100, -- percentage
+    xpReward = 10,
+    recipe = {
+        {item = "material1", amount = 2},
+        {item = "material2", amount = 1}
+    }
 }
 ```
 
