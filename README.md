@@ -7,15 +7,8 @@ A FiveM crafting system with placeable benches, weapon repair, and ox_inventory 
 1. Download and place the `sjcrafting` folder in your server's resources directory
 2. Add `ensure sjcrafting` to your server.cfg
 3. Ensure you have the following dependencies:
-- ox_lib
-- ox_inventory
-- ox_target
 
 ## Dependencies
-
-- ox_lib
-- ox_inventory  
-- ox_target
 - Qbox
 - Ox_lib
 - Ox_inventory  
