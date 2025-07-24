@@ -25,3 +25,9 @@ client_scripts {
 server_scripts {
     "server/server.lua",
 }
+
+dependencies {
+    'ox_inventory',
+    'qbx_core',
+    'ox_lib'
+}

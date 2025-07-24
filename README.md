@@ -7,15 +7,12 @@ A FiveM crafting system with placeable benches, weapon repair, and ox_inventory 
 1. Download and place the `sjcrafting` folder in your server's resources directory
 2. Add `ensure sjcrafting` to your server.cfg
 3. Ensure you have the following dependencies:
-   - ox_lib
-   - ox_inventory
-   - ox_target
 
 ## Dependencies
-
-- ox_lib
-- ox_inventory  
-- ox_target
+- Qbox
+- Ox_lib
+- Ox_inventory  
+- Ox_target
 
 ## Setup
 
@@ -43,9 +40,9 @@ Add these items to your ox_inventory items.lua:
     consume = 0,
     buttons = {
         {
-            label = 'Place',
+            label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench('weapon_bench', slot)
+                exports.sjcrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -60,14 +57,18 @@ Add these items to your ox_inventory items.lua:
     consume = 0,
     buttons = {
         {
-            label = 'Place',
+            label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench('police_bench', slot)
+                exports.sjcrafting:placeCraftingBench(slot)
             end
         }
     }
 }
 ```
+
+### Database Setup
+
+The script will automatically create the required database tables on startup. If you encounter any database issues, you can manually run the `database.sql` file in your MySQL database.
 
 ## Adding More Placeable Items
 
@@ -85,9 +86,9 @@ To add additional placeable crafting benches:
     consume = 0,
     buttons = {
         {
-            label = 'Place',
+            label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench('your_bench_type', slot)
+                exports.sjcrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -145,13 +146,17 @@ Add recipes to the appropriate section and type in `Config.CraftingItems`:
 - ox_inventory integration
 - ox_target interaction
 
+## Commands
+- /createcrafting to create a new crafting table
+- /managecrafting to view, teleport to, and delete all crafting tables
+
 ## Usage
 
-1. Use a crafting bench item from inventory to place it
-2. Approach the placed bench and press E to interact
+1. Use a crafting bench item from inventory(or place as admin)
+2. Approach the placed bench and third eye to interact
 3. Select items to craft or repair
 4. Wait for crafting/repair to complete
 
 ## Exports
 
-- `placeCraftingBench(benchType, slot)` - Places a crafting bench from inventory slot 
+- `placeCraftingBench(slot)` - Places a crafting bench from inventory slot 
