@@ -322,13 +322,13 @@ function placeBench(gizmoResult)
     local rotation = gizmoResult.rotation
     
     if currentBenchData.itemName then
-        TriggerServerEvent('sjcrafting:server:placeBenchFromItem', 
+        TriggerServerEvent('SJCrafting:server:placeBenchFromItem', 
             currentBenchData.itemName,
             coords, 
             rotation
         )
     else
-        TriggerServerEvent('sjcrafting:server:placeStaticBench', 
+        TriggerServerEvent('SJCrafting:server:placeStaticBench', 
             currentBenchData.type, 
             coords, 
             rotation, 

@@ -172,7 +172,7 @@ local function AddXP(source, amount)
         xpRequired = GetXPForLevel(currentLevel)
         
         -- Notify player of level up
-        TriggerClientEvent('sjcrafting:levelUp', source, currentLevel)
+        TriggerClientEvent('SJCrafting:levelUp', source, currentLevel)
     end
     
     SavePlayerData(citizenid)
@@ -320,9 +320,9 @@ CreateThread(function()
                                 timestamp = os.time()
                             })
                             
-                            TriggerClientEvent('sjcrafting:craftingComplete', playerId, queueItem.itemName, queueItem.amount, true)
+                            TriggerClientEvent('SJCrafting:craftingComplete', playerId, queueItem.itemName, queueItem.amount, true)
                         else
-                            TriggerClientEvent('sjcrafting:craftingComplete', playerId, queueItem.itemName, queueItem.amount, false)
+                            TriggerClientEvent('SJCrafting:craftingComplete', playerId, queueItem.itemName, queueItem.amount, false)
                         end
                     end
                 end
@@ -332,7 +332,7 @@ CreateThread(function()
 end)
 
 -- Server Callbacks
-lib.callback.register('sjcrafting:getCraftingData', function(source)
+lib.callback.register('SJCrafting:getCraftingData', function(source)
     local Player = QBX:GetPlayer(source)
     if not Player then return {success = false} end
     
@@ -350,7 +350,7 @@ lib.callback.register('sjcrafting:getCraftingData', function(source)
     }
 end)
 
-lib.callback.register('sjcrafting:addToQueue', function(source, itemName, stationType, amount)
+lib.callback.register('SJCrafting:addToQueue', function(source, itemName, stationType, amount)
     local success, message = AddToQueue(source, itemName, stationType, amount)
     
     return {
@@ -359,7 +359,7 @@ lib.callback.register('sjcrafting:addToQueue', function(source, itemName, statio
     }
 end)
 
-lib.callback.register('sjcrafting:cancelQueueItem', function(source, itemId)
+lib.callback.register('SJCrafting:cancelQueueItem', function(source, itemId)
     local Player = QBX:GetPlayer(source)
     if not Player then return {success = false} end
     
@@ -408,12 +408,12 @@ lib.callback.register('sjcrafting:cancelQueueItem', function(source, itemId)
 end)
 
 -- Check admin permission
-lib.callback.register('sjcrafting:checkAdminPermission', function(source)
+lib.callback.register('SJCrafting:checkAdminPermission', function(source)
     return IsPlayerAceAllowed(source, 'admin')
 end)
 
 -- Check job access for crafting station
-lib.callback.register('sjcrafting:checkJobAccess', function(source, stationType, allowedJobs)
+lib.callback.register('SJCrafting:checkJobAccess', function(source, stationType, allowedJobs)
     local Player = QBX:GetPlayer(source)
     if not Player then 
         return {success = false, message = "Player not found"}
@@ -447,7 +447,7 @@ lib.callback.register('sjcrafting:checkJobAccess', function(source, stationType,
 end)
 
 -- Callback to get crafting items with proper labels
-lib.callback.register('sjcrafting:getCraftingItems', function(source, stationType)
+lib.callback.register('SJCrafting:getCraftingItems', function(source, stationType)
     if not Config.CraftingItems[stationType] then
         return {}
     end
@@ -490,7 +490,7 @@ lib.callback.register('sjcrafting:getCraftingItems', function(source, stationTyp
 end)
 
 -- Get static crafting stations
-lib.callback.register('sjcrafting:getStaticStations', function()
+lib.callback.register('SJCrafting:getStaticStations', function()
     Wait(100)
     
     local adminBenches = exports.oxmysql:executeSync('SELECT * FROM admin_crafting_benches WHERE is_active = 1')
@@ -516,7 +516,7 @@ lib.callback.register('sjcrafting:getStaticStations', function()
 end)
 
 -- Get all placed benches for admin management
-lib.callback.register('sjcrafting:getAllPlacedBenches', function(source)
+lib.callback.register('SJCrafting:getAllPlacedBenches', function(source)
     if not IsPlayerAceAllowed(source, 'admin') then
         return {}
     end
@@ -548,7 +548,7 @@ lib.callback.register('sjcrafting:getAllPlacedBenches', function(source)
 end)
 
 -- Check if a bench exists in the database
-lib.callback.register('sjcrafting:checkBenchExists', function(source, benchId, tableSource)
+lib.callback.register('SJCrafting:checkBenchExists', function(source, benchId, tableSource)
     local result = nil
     if tableSource == "admin" then
         result = exports.oxmysql:executeSync('SELECT id FROM admin_crafting_benches WHERE id = ?', {benchId})
@@ -561,7 +561,7 @@ lib.callback.register('sjcrafting:checkBenchExists', function(source, benchId, t
 end)
 
 -- Check if a bench is active in the database
-lib.callback.register('sjcrafting:checkBenchActive', function(source, benchId, tableSource)
+lib.callback.register('SJCrafting:checkBenchActive', function(source, benchId, tableSource)
     local result = nil
     if tableSource == "admin" then
         result = exports.oxmysql:executeSync('SELECT id FROM admin_crafting_benches WHERE id = ? AND is_active = 1', {benchId})
@@ -574,7 +574,7 @@ lib.callback.register('sjcrafting:checkBenchActive', function(source, benchId, t
 end)
 
 -- Delete a placed bench
-lib.callback.register('sjcrafting:deletePlacedBench', function(source, benchId, tableSource)
+lib.callback.register('SJCrafting:deletePlacedBench', function(source, benchId, tableSource)
     if not IsPlayerAceAllowed(source, 'admin') then
         return false
     end
@@ -597,7 +597,7 @@ lib.callback.register('sjcrafting:deletePlacedBench', function(source, benchId, 
     
     if success then
         -- Notify all clients to remove the bench
-        TriggerClientEvent('sjcrafting:client:removeBench', -1, benchId, tableSource)
+        TriggerClientEvent('SJCrafting:client:removeBench', -1, benchId, tableSource)
         return true
     else
         print('^1[SJ Crafting]^7 Failed to delete bench from database')
@@ -607,7 +607,7 @@ lib.callback.register('sjcrafting:deletePlacedBench', function(source, benchId, 
 end)
 
 -- Place static crafting bench
-RegisterNetEvent('sjcrafting:server:placeStaticBench', function(benchType, coords, rotation, label, allowedJobs, customProp, weaponRepair)
+RegisterNetEvent('SJCrafting:server:placeStaticBench', function(benchType, coords, rotation, label, allowedJobs, customProp, weaponRepair)
     local source = source
     local Player = QBX:GetPlayer(source)
     
@@ -658,7 +658,7 @@ RegisterNetEvent('sjcrafting:server:placeStaticBench', function(benchType, coord
     
     print('^2[SJ Crafting]^7 Admin ' .. Player.PlayerData.citizenid .. ' placed crafting bench: ' .. benchType .. ' at ' .. coordsString .. ' with ID: ' .. tostring(insertId))
     
-    TriggerClientEvent('sjcrafting:client:spawnNewBench', -1, {
+    TriggerClientEvent('SJCrafting:client:spawnNewBench', -1, {
         id = insertId,
         bench_type = benchType,
         label = label,
@@ -671,7 +671,7 @@ RegisterNetEvent('sjcrafting:server:placeStaticBench', function(benchType, coord
 end)
 
 -- Place bench from inventory item
-RegisterNetEvent('sjcrafting:server:placeBenchFromItem', function(itemName, coords, rotation)
+RegisterNetEvent('SJCrafting:server:placeBenchFromItem', function(itemName, coords, rotation)
     local source = source
     local Player = QBX:GetPlayer(source)
     
@@ -757,7 +757,7 @@ RegisterNetEvent('sjcrafting:server:placeBenchFromItem', function(itemName, coor
     
     local benchId = exports.oxmysql:executeSync('SELECT LAST_INSERT_ID() as id')[1].id
     
-    TriggerClientEvent('sjcrafting:client:spawnNewBench', -1, {
+    TriggerClientEvent('SJCrafting:client:spawnNewBench', -1, {
         id = benchId,
         bench_type = benchType,
         crafting_type = craftingType,
@@ -771,7 +771,7 @@ RegisterNetEvent('sjcrafting:server:placeBenchFromItem', function(itemName, coor
 end)
 
 -- Pick up placed bench
-RegisterNetEvent('sjcrafting:server:pickupBench', function(benchId)
+RegisterNetEvent('SJCrafting:server:pickupBench', function(benchId)
     local source = source
     local Player = QBX:GetPlayer(source)
     
@@ -891,9 +891,9 @@ RegisterNetEvent('sjcrafting:server:pickupBench', function(benchId)
         type = 'success'
     })
     
-    TriggerClientEvent('sjcrafting:client:markBenchRemoved', -1, benchId)
+    TriggerClientEvent('SJCrafting:client:markBenchRemoved', -1, benchId)
     
-    TriggerClientEvent('sjcrafting:client:removeBench', -1, benchId, tableSource)
+    TriggerClientEvent('SJCrafting:client:removeBench', -1, benchId, tableSource)
 end)
 
 -- Admin command to reset player level
@@ -1025,7 +1025,7 @@ CreateThread(function()
 end)
 
 -- Callback to get bench prop model
-lib.callback.register('sjcrafting:getBenchProp', function(source, benchType)
+lib.callback.register('SJCrafting:getBenchProp', function(source, benchType)
     if Config.CraftingStations and Config.CraftingStations.placeable and Config.CraftingStations.placeable[benchType] then
         return Config.CraftingStations.placeable[benchType].prop
     end
@@ -1033,7 +1033,7 @@ lib.callback.register('sjcrafting:getBenchProp', function(source, benchType)
 end)
 
 -- Callback to get bench data for item
-lib.callback.register('sjcrafting:getBenchDataForItem', function(source, itemName)
+lib.callback.register('SJCrafting:getBenchDataForItem', function(source, itemName)
     for type, benchData in pairs(Config.CraftingStations.placeable) do
         if benchData.item == itemName then
             return {
@@ -1047,7 +1047,7 @@ lib.callback.register('sjcrafting:getBenchDataForItem', function(source, itemNam
 end)
 
 -- Callback to get bench data for item
-lib.callback.register('sjcrafting:checkItemAndGetBenchData', function(source, itemName)
+lib.callback.register('SJCrafting:checkItemAndGetBenchData', function(source, itemName)
     for type, benchData in pairs(Config.CraftingStations.placeable) do
         if benchData.item == itemName then
             return {
@@ -1063,7 +1063,7 @@ lib.callback.register('sjcrafting:checkItemAndGetBenchData', function(source, it
 end)
 
 -- Callback to check pickup permission
-lib.callback.register('sjcrafting:checkPickupPermission', function(source, benchId)
+lib.callback.register('SJCrafting:checkPickupPermission', function(source, benchId)
     local Player = QBX:GetPlayer(source)
     if not Player then return false end
     
@@ -1098,7 +1098,7 @@ lib.callback.register('sjcrafting:checkPickupPermission', function(source, bench
 end)
 
 -- Callback to get crafting bench item from specific slot
-lib.callback.register('sjcrafting:getCraftingBenchItemFromSlot', function(source, slot)
+lib.callback.register('SJCrafting:getCraftingBenchItemFromSlot', function(source, slot)
     local Player = QBX:GetPlayer(source)
     if not Player then return nil end
     
@@ -1118,7 +1118,7 @@ lib.callback.register('sjcrafting:getCraftingBenchItemFromSlot', function(source
 end)
 
 -- Callback to remove crafting bench item from inventory
-lib.callback.register('sjcrafting:removeCraftingBenchItem', function(source, itemName)
+lib.callback.register('SJCrafting:removeCraftingBenchItem', function(source, itemName)
     local Player = QBX:GetPlayer(source)
     if not Player then return false end
     
@@ -1141,6 +1141,21 @@ local function InitializePlayerRepairData(source)
             repairHistory = {}
         }
     end
+end
+
+-- Helper function to get repair recipe with case-insensitive matching
+local function GetRepairRecipe(itemName)
+    if Config.RepairRecipes[itemName] then
+        return Config.RepairRecipes[itemName]
+    end
+    
+    for weaponName, recipe in pairs(Config.RepairRecipes) do
+        if string.lower(weaponName) == string.lower(itemName) then
+            return recipe
+        end
+    end
+    
+    return nil
 end
 
 -- Check if player can repair item
@@ -1183,21 +1198,6 @@ local function CanRepairItem(source, itemName, slot)
     end
     
     return true, "Success"
-end
-
--- Helper function to get repair recipe with case-insensitive matching
-local function GetRepairRecipe(itemName)
-    if Config.RepairRecipes[itemName] then
-        return Config.RepairRecipes[itemName]
-    end
-    
-    for weaponName, recipe in pairs(Config.RepairRecipes) do
-        if string.lower(weaponName) == string.lower(itemName) then
-            return recipe
-        end
-    end
-    
-    return nil
 end
 
 -- Add item to repair queue
@@ -1303,7 +1303,7 @@ CreateThread(function()
                                 timestamp = os.time()
                             })
                             
-                            TriggerClientEvent('sjcrafting:repairComplete', playerId, queueItem.itemName, true)
+                            TriggerClientEvent('SJCrafting:repairComplete', playerId, queueItem.itemName, true)
                         else
                             exports.ox_inventory:AddItem(playerId, queueItem.itemName, 1, queueItem.itemData.metadata)
                             table.insert(playerData.repairHistory, {
@@ -1313,7 +1313,7 @@ CreateThread(function()
                                 timestamp = os.time()
                             })
                             
-                            TriggerClientEvent('sjcrafting:repairComplete', playerId, queueItem.itemName, false)
+                            TriggerClientEvent('SJCrafting:repairComplete', playerId, queueItem.itemName, false)
                         end
                     end
                 end
@@ -1325,7 +1325,7 @@ end)
 -- Server Callbacks for Repair System
 
 -- Callback to get repairable weapon items from player inventory
-lib.callback.register('sjcrafting:getRepairableItems', function(source, stationType)
+lib.callback.register('SJCrafting:getRepairableItems', function(source, stationType)
     local Player = QBX:GetPlayer(source)
     if not Player then return {} end
     
@@ -1374,7 +1374,7 @@ lib.callback.register('sjcrafting:getRepairableItems', function(source, stationT
 end)
 
 -- Callback to add item to repair queue
-lib.callback.register('sjcrafting:addToRepairQueue', function(source, itemName, slot, stationType)
+lib.callback.register('SJCrafting:addToRepairQueue', function(source, itemName, slot, stationType)
     local success, message = AddToRepairQueue(source, itemName, slot, stationType)
     
     return {
@@ -1384,7 +1384,7 @@ lib.callback.register('sjcrafting:addToRepairQueue', function(source, itemName, 
 end)
 
 -- Callback to cancel repair queue item
-lib.callback.register('sjcrafting:cancelRepairQueueItem', function(source, itemId)
+lib.callback.register('SJCrafting:cancelRepairQueueItem', function(source, itemId)
     local Player = QBX:GetPlayer(source)
     if not Player then return {success = false} end
     
@@ -1426,7 +1426,7 @@ lib.callback.register('sjcrafting:cancelRepairQueueItem', function(source, itemI
 end)
 
 -- Callback to get repair queue
-lib.callback.register('sjcrafting:getRepairQueue', function(source)
+lib.callback.register('SJCrafting:getRepairQueue', function(source)
     local Player = QBX:GetPlayer(source)
     if not Player then return {} end
     

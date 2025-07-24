@@ -22,20 +22,20 @@ CreateThread(function()
     
     benchesLoaded = true
     
-    local staticStations = lib.callback.await('sjcrafting:getStaticStations', false)
+    local staticStations = lib.callback.await('SJCrafting:getStaticStations', false)
     
     if not staticStations then
         return
     end
     
     for _, station in pairs(staticStations) do
-        local benchExists = lib.callback.await('sjcrafting:checkBenchExists', false, station.id, station.isStatic and 'admin' or 'player')
+        local benchExists = lib.callback.await('SJCrafting:checkBenchExists', false, station.id, station.isStatic and 'admin' or 'player')
         if not benchExists then
             removedBenches[station.id] = true
             goto continue
         end
         
-        local benchActive = lib.callback.await('sjcrafting:checkBenchActive', false, station.id, station.isStatic and 'admin' or 'player')
+        local benchActive = lib.callback.await('SJCrafting:checkBenchActive', false, station.id, station.isStatic and 'admin' or 'player')
         if not benchActive then
             removedBenches[station.id] = true
             goto continue
@@ -152,11 +152,11 @@ CreateThread(function()
                     icon = 'fas fa-hand-paper',
                     label = 'Pick Up Bench',
                     canInteract = function()
-                        local canPickup = lib.callback.await('sjcrafting:checkPickupPermission', false, station.id)
+                        local canPickup = lib.callback.await('SJCrafting:checkPickupPermission', false, station.id)
                         return canPickup
                     end,
                     onSelect = function()
-                        TriggerServerEvent('sjcrafting:server:pickupBench', station.id)
+                        TriggerServerEvent('SJCrafting:server:pickupBench', station.id)
                     end
                 })
             end
@@ -238,11 +238,11 @@ CreateThread(function()
                 icon = 'fas fa-hand-paper',
                 label = 'Pick Up Bench',
                 canInteract = function()
-                    local canPickup = lib.callback.await('sjcrafting:checkPickupPermission', false, station.id)
+                    local canPickup = lib.callback.await('SJCrafting:checkPickupPermission', false, station.id)
                     return canPickup
                 end,
                 onSelect = function()
-                    TriggerServerEvent('sjcrafting:server:pickupBench', station.id)
+                    TriggerServerEvent('SJCrafting:server:pickupBench', station.id)
                 end
             })
         end
@@ -275,7 +275,7 @@ end)
 function OpenCraftingStation(stationType, allowedJobs)
     if isCraftingOpen or isRepairOpen then return end
     
-    local jobCheck = lib.callback.await('sjcrafting:checkJobAccess', false, stationType, allowedJobs)
+    local jobCheck = lib.callback.await('SJCrafting:checkJobAccess', false, stationType, allowedJobs)
     if not jobCheck.success then
         lib.notify({
             title = 'Access Denied',
@@ -288,7 +288,7 @@ function OpenCraftingStation(stationType, allowedJobs)
     currentStationType = stationType
     isCraftingOpen = true
     
-    local items = lib.callback.await('sjcrafting:getCraftingItems', false, stationType)
+    local items = lib.callback.await('SJCrafting:getCraftingItems', false, stationType)
     
     utils.ShowNUI('UPDATE_VISIBILITY', true)
     
@@ -336,22 +336,22 @@ RegisterNUICallback('showNotification', function(data, cb)
 end)
 
 RegisterNUICallback('getCraftingData', function(data, cb)
-    local result = lib.callback.await('sjcrafting:getCraftingData', false)
+    local result = lib.callback.await('SJCrafting:getCraftingData', false)
     cb(result)
 end)
 
 RegisterNUICallback('addToQueue', function(data, cb)
-    local result = lib.callback.await('sjcrafting:addToQueue', false, data.itemName, data.stationType, data.amount)
+    local result = lib.callback.await('SJCrafting:addToQueue', false, data.itemName, data.stationType, data.amount)
     cb(result)
 end)
 
 RegisterNUICallback('cancelQueueItem', function(data, cb)
-    local result = lib.callback.await('sjcrafting:cancelQueueItem', false, data.queueIndex)
+    local result = lib.callback.await('SJCrafting:cancelQueueItem', false, data.queueIndex)
     cb(result)
 end)
 
 -- Server events
-RegisterNetEvent('sjcrafting:levelUp', function(newLevel)
+RegisterNetEvent('SJCrafting:levelUp', function(newLevel)
     lib.notify({
         title = 'Level Up!',
         description = 'Crafting Level Up! You are now level ' .. newLevel,
@@ -363,7 +363,7 @@ RegisterNetEvent('sjcrafting:levelUp', function(newLevel)
     end
 end)
 
-RegisterNetEvent('sjcrafting:craftingComplete', function(itemName, amount, success)
+RegisterNetEvent('SJCrafting:craftingComplete', function(itemName, amount, success)
     if success then
         lib.notify({
             title = 'Crafting Complete',
@@ -401,7 +401,7 @@ CreateThread(function()
 end)
 
 RegisterCommand('createcrafting', function()
-    local isAdmin = lib.callback.await('sjcrafting:checkAdminPermission', false)
+    local isAdmin = lib.callback.await('SJCrafting:checkAdminPermission', false)
     if not isAdmin then
         lib.notify({
             title = 'Access Denied',
@@ -482,7 +482,7 @@ RegisterCommand('createcrafting', function()
 end, false)
 
 RegisterCommand('managecrafting', function()
-    local isAdmin = lib.callback.await('sjcrafting:checkAdminPermission', false)
+    local isAdmin = lib.callback.await('SJCrafting:checkAdminPermission', false)
     if not isAdmin then
         lib.notify({
             title = 'Access Denied',
@@ -492,7 +492,7 @@ RegisterCommand('managecrafting', function()
         return
     end
     
-    local benches = lib.callback.await('sjcrafting:getAllPlacedBenches', false)
+    local benches = lib.callback.await('SJCrafting:getAllPlacedBenches', false)
     if not benches then
         lib.notify({
             title = 'Error',
@@ -503,7 +503,7 @@ RegisterCommand('managecrafting', function()
     end
     
     if #benches == 0 then
-        local staticStations = lib.callback.await('sjcrafting:getStaticStations', false)
+        local staticStations = lib.callback.await('SJCrafting:getStaticStations', false)
         if staticStations and #staticStations > 0 then
             lib.notify({
                 title = 'Access Denied',
@@ -576,7 +576,7 @@ RegisterCommand('managecrafting', function()
                                 })
                                 
                                 if confirmed == 'confirm' then
-                                    local success = lib.callback.await('sjcrafting:deletePlacedBench', false, bench.id, bench.table_source)
+                                    local success = lib.callback.await('SJCrafting:deletePlacedBench', false, bench.id, bench.table_source)
                                     if success then
                                         lib.notify({
                                             title = 'Deleted',
@@ -622,7 +622,7 @@ end, false)
 exports('OpenCraftingStation', OpenCraftingStation)
 exports('CloseCraftingStation', CloseCraftingStation)
 
-RegisterNetEvent('sjcrafting:client:spawnNewBench', function(station)
+RegisterNetEvent('SJCrafting:client:spawnNewBench', function(station)
     if removedBenches[station.id] then
         return
     end
@@ -696,11 +696,11 @@ RegisterNetEvent('sjcrafting:client:spawnNewBench', function(station)
             icon = 'fas fa-hand-paper',
             label = 'Pick Up Bench',
             canInteract = function()
-                local canPickup = lib.callback.await('sjcrafting:checkPickupPermission', false, benchId)
+                local canPickup = lib.callback.await('SJCrafting:checkPickupPermission', false, benchId)
                 return canPickup
             end,
             onSelect = function()
-                TriggerServerEvent('sjcrafting:server:pickupBench', benchId)
+                TriggerServerEvent('SJCrafting:server:pickupBench', benchId)
             end
         })
     end
@@ -727,11 +727,11 @@ RegisterNetEvent('sjcrafting:client:spawnNewBench', function(station)
     
 end)
 
-RegisterNetEvent('sjcrafting:client:markBenchRemoved', function(benchId)
+RegisterNetEvent('SJCrafting:client:markBenchRemoved', function(benchId)
     removedBenches[benchId] = true
 end)
 
-RegisterNetEvent('sjcrafting:client:removeBench', function(benchId, tableSource)
+RegisterNetEvent('SJCrafting:client:removeBench', function(benchId, tableSource)
     isRemovingBench = true
     
     local uniqueKey = benchId .. '_' .. (tableSource or 'unknown')
@@ -821,7 +821,7 @@ exports('placeCraftingBench', function(slot)
         return
     end
     
-    local itemData = lib.callback.await('sjcrafting:getCraftingBenchItemFromSlot', false, slot)
+    local itemData = lib.callback.await('SJCrafting:getCraftingBenchItemFromSlot', false, slot)
     if not itemData then
         lib.notify({
             title = 'Error',
@@ -831,7 +831,7 @@ exports('placeCraftingBench', function(slot)
         return
     end
     
-    local result = lib.callback.await('sjcrafting:checkItemAndGetBenchData', false, itemData.name)
+    local result = lib.callback.await('SJCrafting:checkItemAndGetBenchData', false, itemData.name)
     if not result or not result.success then
         lib.notify({
             title = 'Error',
@@ -841,7 +841,7 @@ exports('placeCraftingBench', function(slot)
         return
     end
     
-    local removeSuccess = lib.callback.await('sjcrafting:removeCraftingBenchItem', false, itemData.name)
+    local removeSuccess = lib.callback.await('SJCrafting:removeCraftingBenchItem', false, itemData.name)
     if not removeSuccess then
         lib.notify({
             title = 'Error',
@@ -859,7 +859,7 @@ end)
 function OpenRepairStation(stationType, allowedJobs)
     if isRepairOpen or isCraftingOpen then return end
     
-    local jobCheck = lib.callback.await('sjcrafting:checkJobAccess', false, stationType, allowedJobs)
+    local jobCheck = lib.callback.await('SJCrafting:checkJobAccess', false, stationType, allowedJobs)
     if not jobCheck.success then
         lib.notify({
             title = 'Access Denied',
@@ -872,7 +872,7 @@ function OpenRepairStation(stationType, allowedJobs)
     currentRepairStationType = stationType
     isRepairOpen = true
     
-    local repairableItems = lib.callback.await('sjcrafting:getRepairableItems', false, stationType)
+    local repairableItems = lib.callback.await('SJCrafting:getRepairableItems', false, stationType)
     
     utils.SendReactMessage('OPEN_REPAIR', {
         stationType = stationType,
@@ -896,10 +896,10 @@ function CloseRepairStation()
 end
 
 RegisterNUICallback('addToRepairQueue', function(data, cb)
-    local result = lib.callback.await('sjcrafting:addToRepairQueue', false, data.itemName, data.slot, data.stationType)
+    local result = lib.callback.await('SJCrafting:addToRepairQueue', false, data.itemName, data.slot, data.stationType)
     
     if result.success then
-        local updatedRepairableItems = lib.callback.await('sjcrafting:getRepairableItems', false, data.stationType)
+        local updatedRepairableItems = lib.callback.await('SJCrafting:getRepairableItems', false, data.stationType)
         
         utils.SendReactMessage('UPDATE_REPAIRABLE_ITEMS', {
             items = updatedRepairableItems
@@ -910,10 +910,10 @@ RegisterNUICallback('addToRepairQueue', function(data, cb)
 end)
 
 RegisterNUICallback('cancelRepairQueueItem', function(data, cb)
-    local result = lib.callback.await('sjcrafting:cancelRepairQueueItem', false, data.queueIndex)
+    local result = lib.callback.await('SJCrafting:cancelRepairQueueItem', false, data.queueIndex)
     
     if result.success then
-        local updatedRepairableItems = lib.callback.await('sjcrafting:getRepairableItems', false, currentRepairStationType)
+        local updatedRepairableItems = lib.callback.await('SJCrafting:getRepairableItems', false, currentRepairStationType)
         
         utils.SendReactMessage('UPDATE_REPAIRABLE_ITEMS', {
             items = updatedRepairableItems
@@ -924,7 +924,7 @@ RegisterNUICallback('cancelRepairQueueItem', function(data, cb)
 end)
 
 RegisterNUICallback('getRepairQueue', function(data, cb)
-    local result = lib.callback.await('sjcrafting:getRepairQueue', false)
+    local result = lib.callback.await('SJCrafting:getRepairQueue', false)
     cb(result)
 end)
 
@@ -946,7 +946,7 @@ CreateThread(function()
     end
 end)
 
-RegisterNetEvent('sjcrafting:repairComplete', function(itemName, success)
+RegisterNetEvent('SJCrafting:repairComplete', function(itemName, success)
     if success then
         lib.notify({
             title = 'Repair Complete',
