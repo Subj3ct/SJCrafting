@@ -40,9 +40,9 @@ Add these items to your ox_inventory items.lua:
     consume = 0,
     buttons = {
         {
-            label = 'Place',
+            label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench('weapon_bench', slot)
+                exports.sjcrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -57,9 +57,9 @@ Add these items to your ox_inventory items.lua:
     consume = 0,
     buttons = {
         {
-            label = 'Place',
+            label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench('police_bench', slot)
+                exports.sjcrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -86,9 +86,9 @@ To add additional placeable crafting benches:
     consume = 0,
     buttons = {
         {
-            label = 'Place',
+            label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench('your_bench_type', slot)
+                exports.sjcrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -159,4 +159,4 @@ Add recipes to the appropriate section and type in `Config.CraftingItems`:
 
 ## Exports
 
-- `placeCraftingBench(benchType, slot)` - Places a crafting bench from inventory slot 
+- `placeCraftingBench(slot)` - Places a crafting bench from inventory slot 
