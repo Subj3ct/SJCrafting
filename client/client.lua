@@ -9,6 +9,7 @@ local placedBenches = {}
 local removedBenches = {}
 local isRemovingBench = false
 local benchesLoaded = false
+local currentBenchCoords = nil 
 
 -- Repair System Variables
 local isRepairOpen = false
@@ -121,9 +122,10 @@ CreateThread(function()
                     name = 'crafting_station_' .. station.bench_type,
                     icon = 'fas fa-hammer',
                     label = station.label,
-                    onSelect = function()
-                        OpenCraftingStation(craftingType, station.allowed_jobs)
-                    end
+                                    onSelect = function()
+                    local coords = json.decode(station.coords)
+                    OpenCraftingStation(craftingType, station.allowed_jobs, coords)
+                end
                 }
             }
     
@@ -209,7 +211,8 @@ CreateThread(function()
                 icon = 'fas fa-hammer',
                 label = station.label,
                 onSelect = function()
-                    OpenCraftingStation(craftingType, station.allowed_jobs)
+                    local coords = json.decode(station.coords)
+                    OpenCraftingStation(craftingType, station.allowed_jobs, coords)
                 end
             }
         }
@@ -272,7 +275,7 @@ CreateThread(function()
     
 end)
 
-function OpenCraftingStation(stationType, allowedJobs)
+function OpenCraftingStation(stationType, allowedJobs, benchCoords)
     if isCraftingOpen or isRepairOpen then return end
     
     local jobCheck = lib.callback.await('SJCrafting:checkJobAccess', false, stationType, allowedJobs)
@@ -286,6 +289,7 @@ function OpenCraftingStation(stationType, allowedJobs)
     end
     
     currentStationType = stationType
+    currentBenchCoords = benchCoords
     isCraftingOpen = true
     
     local items = lib.callback.await('SJCrafting:getCraftingItems', false, stationType)
@@ -306,6 +310,7 @@ function CloseCraftingStation()
     
     isCraftingOpen = false
     currentStationType = nil
+    currentBenchCoords = nil 
     
     utils.SendReactMessage('CLOSE_CRAFTING', {})
     utils.ShowNUI('UPDATE_VISIBILITY', false)
@@ -341,7 +346,7 @@ RegisterNUICallback('getCraftingData', function(data, cb)
 end)
 
 RegisterNUICallback('addToQueue', function(data, cb)
-    local result = lib.callback.await('SJCrafting:addToQueue', false, data.itemName, data.stationType, data.amount)
+    local result = lib.callback.await('SJCrafting:addToQueue', false, data.itemName, data.stationType, data.amount, currentBenchCoords)
     cb(result)
 end)
 
@@ -385,6 +390,23 @@ RegisterNetEvent('SJCrafting:craftingComplete', function(itemName, amount, succe
             success = success
         })
     end
+end)
+
+RegisterNetEvent('SJCrafting:craftingCanceled', function(canceledItems, reason)
+    lib.notify({
+        title = 'Crafting Canceled',
+        description = reason .. ' - All items have been returned to your inventory',
+        type = 'error'
+    })
+    
+    if isCraftingOpen then
+        utils.SendReactMessage('CRAFTING_CANCELED', {
+            canceledItems = canceledItems,
+            reason = reason
+        })
+    end
+    
+    CloseCraftingStation()
 end)
 
 CreateThread(function()
@@ -673,7 +695,8 @@ RegisterNetEvent('SJCrafting:client:spawnNewBench', function(station)
             label = station.label,
             onSelect = function()
                 local stationType = station.crafting_type or station.bench_type
-                OpenCraftingStation(stationType, station.allowed_jobs)
+                local coords = json.decode(station.coords)
+                OpenCraftingStation(stationType, station.allowed_jobs, coords)
             end
         }
     }

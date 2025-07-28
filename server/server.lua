@@ -1,8 +1,9 @@
 local QBX = exports['qbx_core']
 local utils = require 'modules.utils'
 
--- Player crafting data storage
 local PlayerCraftingData = {}
+
+local PlayerCraftingLocations = {}
 
 -- Validate items exist in ox_inventory
 local function ValidateItems()
@@ -54,7 +55,6 @@ end
 
 -- Initialize database tables
 CreateThread(function()
-    -- Player crafting data table
     exports.oxmysql:executeSync([[
         CREATE TABLE IF NOT EXISTS player_crafting (
             citizenid VARCHAR(50) PRIMARY KEY,
@@ -65,7 +65,6 @@ CreateThread(function()
         )
     ]])
     
-    -- Admin-placed crafting benches table
     exports.oxmysql:executeSync([[
         CREATE TABLE IF NOT EXISTS admin_crafting_benches (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -84,7 +83,6 @@ CreateThread(function()
         )
     ]])
     
-    -- Player-placed crafting benches table
     exports.oxmysql:executeSync([[
         CREATE TABLE IF NOT EXISTS player_crafting_benches (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -119,13 +117,11 @@ local function InitializePlayerData(source)
             craftingHistory = {}
         }
         
-        -- Load from database if exists
         local result = exports.oxmysql:executeSync('SELECT * FROM player_crafting WHERE citizenid = ?', {citizenid})
         if result and result[1] then
             PlayerCraftingData[citizenid].level = result[1].level or 1
             PlayerCraftingData[citizenid].xp = result[1].xp or 0
         else
-            -- Insert new player data
             exports.oxmysql:executeSync('INSERT INTO player_crafting (citizenid, level, xp) VALUES (?, ?, ?)', {
                 citizenid, 1, 0
             })
@@ -133,7 +129,6 @@ local function InitializePlayerData(source)
     end
 end
 
--- Save player data to database
 local function SavePlayerData(citizenid)
     if PlayerCraftingData[citizenid] then
         exports.oxmysql:executeSync('UPDATE player_crafting SET level = ?, xp = ? WHERE citizenid = ?', {
@@ -144,12 +139,60 @@ local function SavePlayerData(citizenid)
     end
 end
 
--- Calculate XP required for next level
+local function CancelCraftingDueToDistance(citizenid, reason)
+    if not PlayerCraftingData[citizenid] or #PlayerCraftingData[citizenid].queue == 0 then
+        return
+    end
+    
+    local player = QBX:GetPlayerByCitizenId(citizenid)
+    if not player or not player.PlayerData.source then
+        return
+    end
+    
+    local playerId = player.PlayerData.source
+    local canceledItems = {}
+    
+    for i = #PlayerCraftingData[citizenid].queue, 1, -1 do
+        local queueItem = PlayerCraftingData[citizenid].queue[i]
+        
+        local items = Config.CraftingItems[queueItem.stationType]
+        local itemConfig = nil
+        
+        for _, item in pairs(items) do
+            if item.name == queueItem.itemName then
+                itemConfig = item
+                break
+            end
+        end
+        
+        if itemConfig and Config.DistanceCancellation.returnItemsOnCancel then
+            for _, ingredient in pairs(itemConfig.recipe) do
+                exports.ox_inventory:AddItem(playerId, ingredient.item, ingredient.amount * queueItem.amount)
+            end
+        end
+        
+        table.insert(canceledItems, {
+            itemName = queueItem.itemName,
+            itemLabel = queueItem.itemLabel,
+            amount = queueItem.amount
+        })
+        
+        table.remove(PlayerCraftingData[citizenid].queue, i)
+    end
+    
+    PlayerCraftingLocations[citizenid] = nil
+    
+    if #canceledItems > 0 then
+        TriggerClientEvent('SJCrafting:craftingCanceled', playerId, canceledItems, reason)
+        
+        print('^3[SJ Crafting]^7 Player ' .. citizenid .. ' crafting canceled due to distance. Items returned: ' .. #canceledItems)
+    end
+end
+
 local function GetXPForLevel(level)
     return math.floor(Config.LevelSystem.xpPerLevel * (Config.LevelSystem.xpMultiplier ^ (level - 1)))
 end
 
--- Add XP to player
 local function AddXP(source, amount)
     local Player = QBX:GetPlayer(source)
     if not Player then return end
@@ -161,7 +204,6 @@ local function AddXP(source, amount)
     
     PlayerCraftingData[citizenid].xp = PlayerCraftingData[citizenid].xp + amount
     
-    -- Check for level up
     local currentLevel = PlayerCraftingData[citizenid].level
     local xpRequired = GetXPForLevel(currentLevel)
     
@@ -171,19 +213,16 @@ local function AddXP(source, amount)
         PlayerCraftingData[citizenid].level = currentLevel
         xpRequired = GetXPForLevel(currentLevel)
         
-        -- Notify player of level up
         TriggerClientEvent('SJCrafting:levelUp', source, currentLevel)
     end
     
     SavePlayerData(citizenid)
 end
 
--- Check if player can craft item
 local function CanCraftItem(source, itemName, stationType, amount)
     local Player = QBX:GetPlayer(source)
     if not Player then return false, "Player not found" end
     
-    -- Get item config
     local items = Config.CraftingItems[stationType]
     if not items then return false, "Invalid station type" end
     
@@ -197,7 +236,6 @@ local function CanCraftItem(source, itemName, stationType, amount)
     
     if not itemConfig then return false, "Item not found" end
     
-    -- Check level requirement
     local citizenid = Player.PlayerData.citizenid
     if not PlayerCraftingData[citizenid] then
         InitializePlayerData(source)
@@ -207,17 +245,14 @@ local function CanCraftItem(source, itemName, stationType, amount)
         return false, "Level too low. Required: " .. itemConfig.requiredLevel
     end
     
-    -- Check amount limit
     if amount > itemConfig.maxAmount then
         return false, "Amount exceeds maximum"
     end
     
-    -- Check queue size
     if #PlayerCraftingData[citizenid].queue >= Config.MaxQueueSize then
         return false, "Queue is full"
     end
     
-    -- Check ingredients
     for _, ingredient in pairs(itemConfig.recipe) do
         local hasItem = exports.ox_inventory:GetItem(source, ingredient.item, nil, true)
         if hasItem < (ingredient.amount * amount) then
@@ -228,12 +263,10 @@ local function CanCraftItem(source, itemName, stationType, amount)
     return true, "Success"
 end
 
--- Add item to crafting queue
-local function AddToQueue(source, itemName, stationType, amount)
+local function AddToQueue(source, itemName, stationType, amount, benchCoords)
     local Player = QBX:GetPlayer(source)
     if not Player then return false, "Player not found" end
     
-    -- Validate item exists in ox_inventory
     local oxItems = exports.ox_inventory:Items()
     if not oxItems[itemName] then
         return false, "Item '" .. itemName .. "' does not exist in ox_inventory"
@@ -255,15 +288,12 @@ local function AddToQueue(source, itemName, stationType, amount)
         end
     end
     
-    -- Remove ingredients
     for _, ingredient in pairs(itemConfig.recipe) do
         exports.ox_inventory:RemoveItem(source, ingredient.item, ingredient.amount * amount)
     end
     
-    -- Generate unique ID based on timestamp and random number
     local uniqueId = os.time() * 1000 + math.random(1000, 9999)
     
-    -- Add to queue
     local queueItem = {
         id = uniqueId,
         itemName = itemName,
@@ -274,10 +304,15 @@ local function AddToQueue(source, itemName, stationType, amount)
         totalTime = itemConfig.time * amount,
         successChance = itemConfig.successChance,
         xpReward = itemConfig.xpReward * amount,
-        startTime = os.time()
+        startTime = os.time(),
+        benchCoords = benchCoords
     }
     
     table.insert(PlayerCraftingData[citizenid].queue, queueItem)
+    
+    if Config.DistanceCancellation.enabled and benchCoords then
+        PlayerCraftingLocations[citizenid] = benchCoords
+    end
     
     return true, "Added to queue"
 end
@@ -290,20 +325,16 @@ CreateThread(function()
         for citizenid, playerData in pairs(PlayerCraftingData) do
             if #playerData.queue > 0 then
                 
-                -- Find the player by citizenid
                 local player = QBX:GetPlayerByCitizenId(citizenid)
                 if player and player.PlayerData.source then
                     local playerId = player.PlayerData.source
-                    -- Only process the first item in queue
                     local queueItem = playerData.queue[1]
                     
                     queueItem.timeRemaining = queueItem.timeRemaining - 1
                     
                     if queueItem.timeRemaining <= 0 then
-                        -- Crafting complete - remove from queue
                         table.remove(playerData.queue, 1)
                         
-                        -- Check success chance
                         local randomRoll = math.random(100)
                         local success = randomRoll <= queueItem.successChance
                         
@@ -323,6 +354,38 @@ CreateThread(function()
                             TriggerClientEvent('SJCrafting:craftingComplete', playerId, queueItem.itemName, queueItem.amount, true)
                         else
                             TriggerClientEvent('SJCrafting:craftingComplete', playerId, queueItem.itemName, queueItem.amount, false)
+                        end
+                        
+                        if #playerData.queue == 0 then
+                            PlayerCraftingLocations[citizenid] = nil
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+CreateThread(function()
+    while true do
+        Wait(Config.DistanceCancellation.checkInterval or 2000)
+        
+        if not Config.DistanceCancellation.enabled then
+            Wait(5000)
+        else
+            for citizenid, benchCoords in pairs(PlayerCraftingLocations) do
+                local player = QBX:GetPlayerByCitizenId(citizenid)
+                if not player or not player.PlayerData.source then
+                    PlayerCraftingLocations[citizenid] = nil
+                else
+                    local playerId = player.PlayerData.source
+                    
+                    local playerCoords = GetEntityCoords(GetPlayerPed(playerId))
+                    if playerCoords then
+                        local distance = #(vector3(benchCoords.x, benchCoords.y, benchCoords.z) - playerCoords)
+                        
+                        if distance > Config.DistanceCancellation.maxDistance then
+                            CancelCraftingDueToDistance(citizenid, "You moved too far from the crafting bench")
                         end
                     end
                 end
@@ -350,8 +413,8 @@ lib.callback.register('SJCrafting:getCraftingData', function(source)
     }
 end)
 
-lib.callback.register('SJCrafting:addToQueue', function(source, itemName, stationType, amount)
-    local success, message = AddToQueue(source, itemName, stationType, amount)
+lib.callback.register('SJCrafting:addToQueue', function(source, itemName, stationType, amount, benchCoords)
+    local success, message = AddToQueue(source, itemName, stationType, amount, benchCoords)
     
     return {
         success = success,
@@ -369,7 +432,6 @@ lib.callback.register('SJCrafting:cancelQueueItem', function(source, itemId)
         local queueIndex = nil
         local queueItem = nil
         
-        -- Find item by ID
         for i, item in pairs(PlayerCraftingData[citizenid].queue) do
             if item.id == itemId then
                 queueIndex = i
@@ -379,7 +441,6 @@ lib.callback.register('SJCrafting:cancelQueueItem', function(source, itemId)
         end
         
         if queueItem then
-            -- Return ingredients
             local items = Config.CraftingItems[queueItem.stationType]
             local itemConfig = nil
             
@@ -398,6 +459,10 @@ lib.callback.register('SJCrafting:cancelQueueItem', function(source, itemId)
             
             table.remove(PlayerCraftingData[citizenid].queue, queueIndex)
             
+            if #PlayerCraftingData[citizenid].queue == 0 then
+                PlayerCraftingLocations[citizenid] = nil
+            end
+            
             return {success = true}
         else
             return {success = false, message = "Item not found in queue"}
@@ -407,12 +472,10 @@ lib.callback.register('SJCrafting:cancelQueueItem', function(source, itemId)
     end
 end)
 
--- Check admin permission
 lib.callback.register('SJCrafting:checkAdminPermission', function(source)
     return IsPlayerAceAllowed(source, 'admin')
 end)
 
--- Check job access for crafting station
 lib.callback.register('SJCrafting:checkJobAccess', function(source, stationType, allowedJobs)
     local Player = QBX:GetPlayer(source)
     if not Player then 
@@ -446,7 +509,6 @@ lib.callback.register('SJCrafting:checkJobAccess', function(source, stationType,
     return {success = true}
 end)
 
--- Callback to get crafting items with proper labels
 lib.callback.register('SJCrafting:getCraftingItems', function(source, stationType)
     if not Config.CraftingItems[stationType] then
         return {}
@@ -460,7 +522,7 @@ lib.callback.register('SJCrafting:getCraftingItems', function(source, stationTyp
         
         local processedRecipe = {}
         for _, ingredient in pairs(item.recipe) do
-            local ingredientLabel = ingredient.item -- Default to item name
+            local ingredientLabel = ingredient.item
             if oxItems[ingredient.item] and oxItems[ingredient.item].label then
                 ingredientLabel = oxItems[ingredient.item].label
             end
@@ -489,7 +551,6 @@ lib.callback.register('SJCrafting:getCraftingItems', function(source, stationTyp
     return items
 end)
 
--- Get static crafting stations
 lib.callback.register('SJCrafting:getStaticStations', function()
     Wait(100)
     
@@ -515,7 +576,6 @@ lib.callback.register('SJCrafting:getStaticStations', function()
     return result
 end)
 
--- Get all placed benches for admin management
 lib.callback.register('SJCrafting:getAllPlacedBenches', function(source)
     if not IsPlayerAceAllowed(source, 'admin') then
         return {}
@@ -547,7 +607,6 @@ lib.callback.register('SJCrafting:getAllPlacedBenches', function(source)
     end
 end)
 
--- Check if a bench exists in the database
 lib.callback.register('SJCrafting:checkBenchExists', function(source, benchId, tableSource)
     local result = nil
     if tableSource == "admin" then
@@ -560,7 +619,6 @@ lib.callback.register('SJCrafting:checkBenchExists', function(source, benchId, t
     return exists
 end)
 
--- Check if a bench is active in the database
 lib.callback.register('SJCrafting:checkBenchActive', function(source, benchId, tableSource)
     local result = nil
     if tableSource == "admin" then
@@ -573,7 +631,6 @@ lib.callback.register('SJCrafting:checkBenchActive', function(source, benchId, t
     return active
 end)
 
--- Delete a placed bench
 lib.callback.register('SJCrafting:deletePlacedBench', function(source, benchId, tableSource)
     if not IsPlayerAceAllowed(source, 'admin') then
         return false
@@ -596,7 +653,6 @@ lib.callback.register('SJCrafting:deletePlacedBench', function(source, benchId, 
     end
     
     if success then
-        -- Notify all clients to remove the bench
         TriggerClientEvent('SJCrafting:client:removeBench', -1, benchId, tableSource)
         return true
     else
@@ -606,7 +662,6 @@ lib.callback.register('SJCrafting:deletePlacedBench', function(source, benchId, 
     return false
 end)
 
--- Place static crafting bench
 RegisterNetEvent('SJCrafting:server:placeStaticBench', function(benchType, coords, rotation, label, allowedJobs, customProp, weaponRepair)
     local source = source
     local Player = QBX:GetPlayer(source)
@@ -670,7 +725,6 @@ RegisterNetEvent('SJCrafting:server:placeStaticBench', function(benchType, coord
     })
 end)
 
--- Place bench from inventory item
 RegisterNetEvent('SJCrafting:server:placeBenchFromItem', function(itemName, coords, rotation)
     local source = source
     local Player = QBX:GetPlayer(source)
@@ -770,7 +824,6 @@ RegisterNetEvent('SJCrafting:server:placeBenchFromItem', function(itemName, coor
     })
 end)
 
--- Pick up placed bench
 RegisterNetEvent('SJCrafting:server:pickupBench', function(benchId)
     local source = source
     local Player = QBX:GetPlayer(source)
@@ -862,7 +915,6 @@ RegisterNetEvent('SJCrafting:server:pickupBench', function(benchId)
         return
     end
     
-    -- Delete the bench from database
     local deleteSuccess = exports.oxmysql:executeSync('DELETE FROM player_crafting_benches WHERE id = ?', {benchId})
     local tableSource = "player"
     if deleteSuccess then
@@ -896,7 +948,6 @@ RegisterNetEvent('SJCrafting:server:pickupBench', function(benchId)
     TriggerClientEvent('SJCrafting:client:removeBench', -1, benchId, tableSource)
 end)
 
--- Admin command to reset player level
 RegisterCommand('resetcraftinglevel', function(source, args)
     local targetId = tonumber(args[1])
     if not targetId then
@@ -938,7 +989,6 @@ RegisterCommand('resetcraftinglevel', function(source, args)
     end
 end, false)
 
--- Admin command to set player level
 RegisterCommand('setcraftinglevel', function(source, args)
     local targetId = tonumber(args[1])
     local level = tonumber(args[2])
@@ -992,7 +1042,6 @@ RegisterCommand('setcraftinglevel', function(source, args)
     })
 end, false)
 
--- Player disconnect cleanup
 AddEventHandler('playerDropped', function()
     local source = source
     local Player = QBX:GetPlayer(source)
@@ -1002,10 +1051,10 @@ AddEventHandler('playerDropped', function()
             SavePlayerData(citizenid)
             PlayerCraftingData[citizenid] = nil
         end
+        PlayerCraftingLocations[citizenid] = nil
     end
 end)
 
--- Initialize database table
 CreateThread(function()
     exports.oxmysql:executeSync([[
         CREATE TABLE IF NOT EXISTS player_crafting (
@@ -1024,7 +1073,6 @@ CreateThread(function()
     end
 end)
 
--- Callback to get bench prop model
 lib.callback.register('SJCrafting:getBenchProp', function(source, benchType)
     if Config.CraftingStations and Config.CraftingStations.placeable and Config.CraftingStations.placeable[benchType] then
         return Config.CraftingStations.placeable[benchType].prop
@@ -1032,7 +1080,6 @@ lib.callback.register('SJCrafting:getBenchProp', function(source, benchType)
     return "prop_tool_bench02"
 end)
 
--- Callback to get bench data for item
 lib.callback.register('SJCrafting:getBenchDataForItem', function(source, itemName)
     for type, benchData in pairs(Config.CraftingStations.placeable) do
         if benchData.item == itemName then
@@ -1046,7 +1093,6 @@ lib.callback.register('SJCrafting:getBenchDataForItem', function(source, itemNam
     return nil
 end)
 
--- Callback to get bench data for item
 lib.callback.register('SJCrafting:checkItemAndGetBenchData', function(source, itemName)
     for type, benchData in pairs(Config.CraftingStations.placeable) do
         if benchData.item == itemName then
@@ -1062,7 +1108,6 @@ lib.callback.register('SJCrafting:checkItemAndGetBenchData', function(source, it
     return { success = false, message = "Invalid crafting bench item" }
 end)
 
--- Callback to check pickup permission
 lib.callback.register('SJCrafting:checkPickupPermission', function(source, benchId)
     local Player = QBX:GetPlayer(source)
     if not Player then return false end
@@ -1097,7 +1142,6 @@ lib.callback.register('SJCrafting:checkPickupPermission', function(source, bench
     return canPickup
 end)
 
--- Callback to get crafting bench item from specific slot
 lib.callback.register('SJCrafting:getCraftingBenchItemFromSlot', function(source, slot)
     local Player = QBX:GetPlayer(source)
     if not Player then return nil end
@@ -1117,19 +1161,16 @@ lib.callback.register('SJCrafting:getCraftingBenchItemFromSlot', function(source
     return nil
 end)
 
--- Callback to remove crafting bench item from inventory
 lib.callback.register('SJCrafting:removeCraftingBenchItem', function(source, itemName)
     local Player = QBX:GetPlayer(source)
     if not Player then return false end
     
-    -- Remove the item from inventory
     local removeSuccess = exports.ox_inventory:RemoveItem(source, itemName, 1)
     return removeSuccess
 end)
 
 local PlayerRepairData = {}
 
--- Initialize player repair data
 local function InitializePlayerRepairData(source)
     local Player = QBX:GetPlayer(source)
     if not Player then return end
@@ -1143,7 +1184,7 @@ local function InitializePlayerRepairData(source)
     end
 end
 
--- Helper function to get repair recipe with case-insensitive matching
+
 local function GetRepairRecipe(itemName)
     if Config.RepairRecipes[itemName] then
         return Config.RepairRecipes[itemName]
@@ -1158,7 +1199,6 @@ local function GetRepairRecipe(itemName)
     return nil
 end
 
--- Check if player can repair item
 local function CanRepairItem(source, itemName, slot)
     local Player = QBX:GetPlayer(source)
     if not Player then return false, "Player not found" end
@@ -1200,7 +1240,6 @@ local function CanRepairItem(source, itemName, slot)
     return true, "Success"
 end
 
--- Add item to repair queue
 local function AddToRepairQueue(source, itemName, slot, stationType)
     local Player = QBX:GetPlayer(source)
     if not Player then return false, "Player not found" end
@@ -1231,7 +1270,6 @@ local function AddToRepairQueue(source, itemName, slot, stationType)
         end
     end
     
-    -- Store the complete item data before removing it
     local itemData = {
         name = item.name,
         label = item.label,
@@ -1239,18 +1277,14 @@ local function AddToRepairQueue(source, itemName, slot, stationType)
         count = item.count
     }
     
-    -- Remove the weapon from inventory
     exports.ox_inventory:RemoveItem(source, itemName, 1, item.metadata)
     
-    -- Remove materials
     for _, material in pairs(repairRecipe.materials) do
         exports.ox_inventory:RemoveItem(source, material.item, material.amount)
     end
     
-    -- Generate unique ID based on timestamp and random number
     local uniqueId = os.time() * 1000 + math.random(1000, 9999)
     
-    -- Add to queue
     local queueItem = {
         id = uniqueId,
         itemName = itemName,
@@ -1270,7 +1304,6 @@ local function AddToRepairQueue(source, itemName, slot, stationType)
     return true, "Added to repair queue"
 end
 
--- Process repair queue
 CreateThread(function()
     while true do
         Wait(1000)
@@ -1322,9 +1355,6 @@ CreateThread(function()
     end
 end)
 
--- Server Callbacks for Repair System
-
--- Callback to get repairable weapon items from player inventory
 lib.callback.register('SJCrafting:getRepairableItems', function(source, stationType)
     local Player = QBX:GetPlayer(source)
     if not Player then return {} end
@@ -1340,7 +1370,7 @@ lib.callback.register('SJCrafting:getRepairableItems', function(source, stationT
                     local oxItems = exports.ox_inventory:Items()
                     local processedMaterials = {}
                     for _, material in pairs(repairRecipe.materials) do
-                        local materialLabel = material.item -- Default to item name
+                        local materialLabel = material.item
                         if oxItems[material.item] and oxItems[material.item].label then
                             materialLabel = oxItems[material.item].label
                         end
@@ -1373,7 +1403,6 @@ lib.callback.register('SJCrafting:getRepairableItems', function(source, stationT
     return repairableItems
 end)
 
--- Callback to add item to repair queue
 lib.callback.register('SJCrafting:addToRepairQueue', function(source, itemName, slot, stationType)
     local success, message = AddToRepairQueue(source, itemName, slot, stationType)
     
@@ -1383,7 +1412,6 @@ lib.callback.register('SJCrafting:addToRepairQueue', function(source, itemName, 
     }
 end)
 
--- Callback to cancel repair queue item
 lib.callback.register('SJCrafting:cancelRepairQueueItem', function(source, itemId)
     local Player = QBX:GetPlayer(source)
     if not Player then return {success = false} end
@@ -1425,7 +1453,6 @@ lib.callback.register('SJCrafting:cancelRepairQueueItem', function(source, itemI
     end
 end)
 
--- Callback to get repair queue
 lib.callback.register('SJCrafting:getRepairQueue', function(source)
     local Player = QBX:GetPlayer(source)
     if not Player then return {} end

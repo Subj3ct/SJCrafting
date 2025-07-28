@@ -216,4 +216,12 @@ Config.RepairRecipes = {
     },
 }
 
+-- Distance-based Crafting Cancellation
+Config.DistanceCancellation = {
+    enabled = true, -- Enable/disable distance-based cancellation
+    maxDistance = 5.0, -- Maximum distance in meters before crafting is canceled
+    checkInterval = 2000, -- How often to check distance (in milliseconds)
+    returnItemsOnCancel = true -- Whether to return items when crafting is canceled due to distance
+}
+
 return Config 
