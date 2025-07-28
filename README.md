@@ -42,7 +42,7 @@ Add these items to your ox_inventory items.lua:
         {
             label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench(slot)
+                exports.SJCrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -59,7 +59,7 @@ Add these items to your ox_inventory items.lua:
         {
             label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench(slot)
+                exports.SJCrafting:placeCraftingBench(slot)
             end
         }
     }
@@ -88,7 +88,7 @@ To add additional placeable crafting benches:
         {
             label = 'Place Crafting Bench',
             action = function(slot)
-                exports.sjcrafting:placeCraftingBench(slot)
+                exports.SJCrafting:placeCraftingBench(slot)
             end
         }
     }
